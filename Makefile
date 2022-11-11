@@ -1,6 +1,6 @@
 .PHONY: build
 build:
-	go build -o bin/cvt cmd/cvt/main.go
+	go build -o cvt ./main.go
 
 .PHONY: test
 test:

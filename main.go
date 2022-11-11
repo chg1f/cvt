@@ -34,6 +34,13 @@ func init() {
 	pflag.BoolVarP(&verbose, "verbose", "v", false, "verbose")
 	pflag.BoolVarP(&silent, "silent", "s", false, "silent")
 	pflag.BoolVarP(&help, "help", "h", false, "help")
+	// TODO:
+	zap.ReplaceGlobals(zap.Must(
+		zap.NewDevelopment(
+			zap.ErrorOutput(os.Stderr),
+			zap.IncreaseLevel(zap.FatalLevel),
+		),
+	))
 }
 func main() {
 	pflag.Parse()
@@ -42,13 +49,6 @@ func main() {
 		pflag.PrintDefaults()
 		return
 	}
-	zap.ReplaceGlobals(
-		zap.Must(
-			zap.NewProduction(
-				zap.ErrorOutput(os.Stderr),
-			),
-		),
-	)
 	if !silent {
 		if !verbose {
 		}
@@ -90,37 +90,48 @@ func convert(reader io.Reader, from, to string, unquote bool) (s string) {
 
 	var t interface{}
 
-	switch from {
-	case JSON:
-		if err := json.Unmarshal(bs, &t); err != nil {
+	if bs != nil && len(bs) > 0 {
+		switch from {
+		case JSON:
+			if err := json.Unmarshal(bs, &t); err != nil {
+				zap.L().Fatal("", zap.Error(err))
+			}
+		case YAML:
+			if err := yaml.Unmarshal(bs, &t); err != nil {
+				zap.L().Fatal("", zap.Error(err))
+			}
+		case TOML:
+			if err := toml.Unmarshal(bs, &t); err != nil {
+				zap.L().Fatal("", zap.Error(err))
+			}
+		default:
 			zap.L().Fatal("", zap.Error(err))
 		}
-	case YAML:
-		if err := yaml.Unmarshal(bs, &t); err != nil {
-			zap.L().Fatal("", zap.Error(err))
-		}
-	case TOML:
-		if err := toml.Unmarshal(bs, &t); err != nil {
-			zap.L().Fatal("", zap.Error(err))
-		}
-	default:
-		zap.L().Fatal("", zap.Error(err))
 	}
 
 	switch to {
 	case JSON:
+		if t == nil {
+			return ""
+		}
 		bs, err := json.Marshal(t)
 		if err != nil {
 			zap.L().Fatal("", zap.Error(err))
 		}
 		return string(bs)
 	case YAML:
+		if t == nil {
+			return ""
+		}
 		bs, err := yaml.Marshal(t)
 		if err != nil {
 			zap.L().Fatal("", zap.Error(err))
 		}
 		return string(bs)
 	case TOML:
+		if t == nil {
+			return ""
+		}
 		bs, err := toml.Marshal(t)
 		if err != nil {
 			zap.L().Fatal("", zap.Error(err))
